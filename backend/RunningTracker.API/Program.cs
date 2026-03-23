@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using RunningTracker.API.Data;
+using RunningTracker.API.Middleware;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -31,6 +32,10 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.Migrate();
 }
+
+// Only enforce auth when credentials are configured (skips in local dev if vars aren't set)
+if (app.Configuration["AUTH_USER"] is not null && app.Configuration["AUTH_PASSWORD"] is not null)
+    app.UseMiddleware<BasicAuthMiddleware>();
 
 app.UseCors("DevFrontend");
 app.MapOpenApi();
