@@ -22,4 +22,21 @@ public class PlanController(AppDbContext db) : ControllerBase
     [HttpGet("schedule")]
     public async Task<IActionResult> GetSchedule() =>
         Ok(await db.ScheduleDays.OrderBy(d => d.Order).ToListAsync());
+
+    // PUT api/plan/schedule/{id}
+    [HttpPut("schedule/{id:int}")]
+    public async Task<IActionResult> UpdateScheduleDay(int id, [FromBody] UpdateScheduleDayRequest req)
+    {
+        var day = await db.ScheduleDays.FindAsync(id);
+        if (day is null) return NotFound();
+
+        day.Icon = req.Icon;
+        day.Label = req.Label;
+        day.IsRun = req.IsRun;
+
+        await db.SaveChangesAsync();
+        return Ok(day);
+    }
 }
+
+public record UpdateScheduleDayRequest(string Icon, string Label, bool IsRun);

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   fetchSessions, upsertSession,
-  fetchPlan, fetchPhases, fetchSchedule,
+  fetchPlan, fetchPhases, fetchSchedule, updateScheduleDay,
   TrainingWeek, PhaseInfo, ScheduleDay,
 } from "./api";
 
@@ -16,6 +16,9 @@ export default function RunningTracker() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [editingSchedule, setEditingSchedule] = useState(false);
+  const [editDraft, setEditDraft] = useState<ScheduleDay[]>([]);
+  const [savingSchedule, setSavingSchedule] = useState(false);
 
   useEffect(() => {
     Promise.all([fetchSessions(), fetchPlan(), fetchPhases(), fetchSchedule()])
@@ -47,6 +50,26 @@ export default function RunningTracker() {
       setSaving(null);
     }
   }, [completed]);
+
+  const startEditingSchedule = () => {
+    setEditDraft(schedule.map((d) => ({ ...d })));
+    setEditingSchedule(true);
+  };
+
+  const saveSchedule = async () => {
+    setSavingSchedule(true);
+    try {
+      const updated = await Promise.all(
+        editDraft.map((d) => updateScheduleDay(d.id, d.icon, d.label, d.isRun))
+      );
+      setSchedule(updated);
+      setEditingSchedule(false);
+    } catch {
+      setError("Failed to save schedule — please try again.");
+    } finally {
+      setSavingSchedule(false);
+    }
+  };
 
   const phaseMap = Object.fromEntries(phases.map((p) => [p.phase, p]));
 
@@ -106,13 +129,43 @@ export default function RunningTracker() {
       <div style={{ maxWidth: 780, margin: "0 auto", padding: "1.5rem 1rem" }}>
         {/* Weekly schedule */}
         <div style={{ background: "#111827", border: "1px solid #1e2d45", borderRadius: 12, padding: "1rem 1.25rem", marginBottom: "2rem" }}>
-          <div style={{ fontSize: "0.7rem", letterSpacing: "0.2em", color: "#7a9cc4", textTransform: "uppercase", marginBottom: "0.75rem" }}>Weekly Schedule Template</div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem" }}>
+            <div style={{ fontSize: "0.7rem", letterSpacing: "0.2em", color: "#7a9cc4", textTransform: "uppercase" }}>Weekly Schedule Template</div>
+            {!editingSchedule
+              ? <button onClick={startEditingSchedule} style={{ background: "none", border: "1px solid #2a3550", borderRadius: 6, color: "#7a9cc4", fontSize: "0.68rem", padding: "0.2rem 0.6rem", cursor: "pointer" }}>Edit</button>
+              : <div style={{ display: "flex", gap: "0.5rem" }}>
+                  <button onClick={() => setEditingSchedule(false)} style={{ background: "none", border: "1px solid #2a3550", borderRadius: 6, color: "#6b7a96", fontSize: "0.68rem", padding: "0.2rem 0.6rem", cursor: "pointer" }}>Cancel</button>
+                  <button onClick={saveSchedule} disabled={savingSchedule} style={{ background: "#1a3a1a", border: "1px solid #4ade80", borderRadius: 6, color: "#4ade80", fontSize: "0.68rem", padding: "0.2rem 0.6rem", cursor: "pointer", opacity: savingSchedule ? 0.5 : 1 }}>{savingSchedule ? "Saving…" : "Save"}</button>
+                </div>
+            }
+          </div>
           <div style={{ display: "grid", gridTemplateColumns: `repeat(${schedule.length || 7}, 1fr)`, gap: "0.4rem" }}>
-            {schedule.map((d) => (
+            {(editingSchedule ? editDraft : schedule).map((d, i) => (
               <div key={d.id} style={{ textAlign: "center", background: d.isRun ? "#1a2e4a" : "#0d1525", border: d.isRun ? "1px solid #3b6ea5" : "1px solid #1e2d45", borderRadius: 8, padding: "0.5rem 0.25rem" }}>
-                <div style={{ fontSize: "1.1rem" }}>{d.icon}</div>
-                <div style={{ fontSize: "0.6rem", color: d.isRun ? "#7ab4f5" : "#6b7a96", marginTop: "0.2rem", fontFamily: "monospace" }}>{d.day}</div>
-                <div style={{ fontSize: "0.58rem", color: d.isRun ? "#93c5fd" : "#4a5568", marginTop: "0.1rem" }}>{d.label}</div>
+                {editingSchedule ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem", padding: "0.1rem" }}>
+                    <input
+                      value={d.icon}
+                      onChange={(e) => setEditDraft((prev) => prev.map((x, j) => j === i ? { ...x, icon: e.target.value } : x))}
+                      style={{ background: "#0d1525", border: "1px solid #2a3550", borderRadius: 4, color: "#e8e0d4", fontSize: "0.9rem", textAlign: "center", width: "100%", padding: "0.1rem" }}
+                    />
+                    <input
+                      value={d.label}
+                      onChange={(e) => setEditDraft((prev) => prev.map((x, j) => j === i ? { ...x, label: e.target.value } : x))}
+                      style={{ background: "#0d1525", border: "1px solid #2a3550", borderRadius: 4, color: "#e8e0d4", fontSize: "0.5rem", textAlign: "center", width: "100%", padding: "0.1rem" }}
+                    />
+                    <label style={{ fontSize: "0.5rem", color: "#7a9cc4", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.2rem", cursor: "pointer" }}>
+                      <input type="checkbox" checked={d.isRun} onChange={(e) => setEditDraft((prev) => prev.map((x, j) => j === i ? { ...x, isRun: e.target.checked } : x))} />
+                      run
+                    </label>
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ fontSize: "1.1rem" }}>{d.icon}</div>
+                    <div style={{ fontSize: "0.6rem", color: d.isRun ? "#7ab4f5" : "#6b7a96", marginTop: "0.2rem", fontFamily: "monospace" }}>{d.day}</div>
+                    <div style={{ fontSize: "0.58rem", color: d.isRun ? "#93c5fd" : "#4a5568", marginTop: "0.1rem" }}>{d.label}</div>
+                  </>
+                )}
               </div>
             ))}
           </div>

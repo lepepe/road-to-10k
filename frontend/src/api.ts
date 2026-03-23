@@ -58,3 +58,13 @@ export async function fetchSchedule(): Promise<ScheduleDay[]> {
   if (!res.ok) throw new Error("Failed to load schedule");
   return res.json();
 }
+
+export async function updateScheduleDay(id: number, icon: string, label: string, isRun: boolean): Promise<ScheduleDay> {
+  const res = await fetch(`${BASE}/plan/schedule/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ icon, label, isRun }),
+  });
+  if (!res.ok) throw new Error("Failed to update schedule");
+  return res.json();
+}
