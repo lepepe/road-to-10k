@@ -1,0 +1,7 @@
+[build]
+builder = "dockerfile"
+
+[deploy]
+healthcheckPath = "/api/sessions"
+healthcheckTimeout = 30
+restartPolicyType = "on_failure"

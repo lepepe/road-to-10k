@@ -4,12 +4,17 @@ using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Railway injects PORT — fall back to 8080 for local Docker, 5000 for dotnet run
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+builder.WebHost.UseUrls($"http://+:{port}");
+
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
-// SQLite via EF Core — DB file lives next to the binary
+// SQLite — use /data volume on Railway, local file otherwise
+var dbPath = Environment.GetEnvironmentVariable("DB_PATH") ?? "running_tracker.db";
 builder.Services.AddDbContext<AppDbContext>(opt =>
-    opt.UseSqlite("Data Source=running_tracker.db"));
+    opt.UseSqlite($"Data Source={dbPath}"));
 
 // Allow any localhost origin in development
 builder.Services.AddCors(opt =>
@@ -20,7 +25,7 @@ builder.Services.AddCors(opt =>
 
 var app = builder.Build();
 
-// Auto-create/migrate DB on startup
+// Auto-run migrations and seed on startup
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -31,4 +36,11 @@ app.UseCors("DevFrontend");
 app.MapOpenApi();
 app.MapScalarApiReference();
 app.MapControllers();
+
+// Serve React SPA static files (wwwroot is populated by the Dockerfile)
+app.UseDefaultFiles();
+app.UseStaticFiles();
+// Fallback: any non-API route returns index.html so React Router works
+app.MapFallbackToFile("index.html");
+
 app.Run();

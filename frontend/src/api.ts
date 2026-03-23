@@ -1,4 +1,4 @@
-const BASE = "http://localhost:5000/api";
+const BASE = import.meta.env.PROD ? "/api" : "http://localhost:5000/api";
 
 export interface TrainingWeek {
   id: number;
