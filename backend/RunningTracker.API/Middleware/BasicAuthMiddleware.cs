@@ -3,8 +3,11 @@ using System.Text;
 
 namespace RunningTracker.API.Middleware;
 
-public class BasicAuthMiddleware(RequestDelegate next, IConfiguration config)
+public class BasicAuthMiddleware(RequestDelegate next)
 {
+    private static readonly string ExpectedUser = Environment.GetEnvironmentVariable("AUTH_USER")!;
+    private static readonly string ExpectedPass = Environment.GetEnvironmentVariable("AUTH_PASSWORD")!;
+
     public async Task InvokeAsync(HttpContext context)
     {
         if (!context.Request.Headers.TryGetValue("Authorization", out var header))
@@ -26,8 +29,8 @@ public class BasicAuthMiddleware(RequestDelegate next, IConfiguration config)
                 .GetString(Convert.FromBase64String(authHeader.Parameter))
                 .Split(':', 2);
 
-            var expectedUser = config["AUTH_USER"];
-            var expectedPass = config["AUTH_PASSWORD"];
+            var expectedUser = ExpectedUser;
+            var expectedPass = ExpectedPass;
 
             if (credentials.Length != 2
                 || credentials[0] != expectedUser

@@ -34,7 +34,8 @@ using (var scope = app.Services.CreateScope())
 }
 
 // Only enforce auth when credentials are configured (skips in local dev if vars aren't set)
-if (app.Configuration["AUTH_USER"] is not null && app.Configuration["AUTH_PASSWORD"] is not null)
+if (Environment.GetEnvironmentVariable("AUTH_USER") is not null &&
+    Environment.GetEnvironmentVariable("AUTH_PASSWORD") is not null)
     app.UseMiddleware<BasicAuthMiddleware>();
 
 app.UseCors("DevFrontend");
