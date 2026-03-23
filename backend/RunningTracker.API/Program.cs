@@ -39,6 +39,7 @@ if (Environment.GetEnvironmentVariable("AUTH_USER") is not null &&
     app.UseMiddleware<BasicAuthMiddleware>();
 
 app.UseCors("DevFrontend");
+app.MapGet("/health", () => Results.Ok("healthy"));
 app.MapOpenApi();
 app.MapScalarApiReference();
 app.MapControllers();

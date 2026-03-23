@@ -10,6 +10,13 @@ public class BasicAuthMiddleware(RequestDelegate next)
 
     public async Task InvokeAsync(HttpContext context)
     {
+        // Let the health check through so Railway knows the service is up
+        if (context.Request.Path.StartsWithSegments("/health"))
+        {
+            await next(context);
+            return;
+        }
+
         if (!context.Request.Headers.TryGetValue("Authorization", out var header))
         {
             Challenge(context);
